@@ -1,4 +1,4 @@
-import React, {useRef, forwardRef} from 'react';
+import React, {useRef} from 'react';
 import {
   ScrollView,
   StyleSheet,
