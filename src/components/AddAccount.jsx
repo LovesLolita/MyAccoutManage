@@ -1,4 +1,4 @@
-import React, {useState, forwardRef, useImperativeHandle} from 'react';
+import React, {useState, forwardRef, useImperativeHandle, memo} from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 
 import icon_close_modal from '../assets/icon_close_modal.png';
+import {saveStore, getStorage, removeStorage} from '../utils/storage';
+import {getUUID} from '../utils/UUID';
 
 const AddAccount = (props, ref) => {
   /* Modal */
@@ -20,6 +22,7 @@ const AddAccount = (props, ref) => {
 
   const show = () => {
     setVisible(true);
+    setId(getUUID());
   };
 
   const hide = () => {
@@ -162,7 +165,7 @@ const AddAccount = (props, ref) => {
         value={name}
         style={nameStyle.input}
         maxLength={20}
-        onChange={text => {
+        onChangeText={text => {
           setName(text || '');
         }}
       />
@@ -191,7 +194,7 @@ const AddAccount = (props, ref) => {
         value={account}
         style={nameStyle.input}
         maxLength={20}
-        onChange={text => {
+        onChangeText={text => {
           setAccount(text || '');
         }}
       />
@@ -220,7 +223,7 @@ const AddAccount = (props, ref) => {
         value={password}
         style={nameStyle.input}
         maxLength={20}
-        onChange={text => {
+        onChangeText={text => {
           setPassword(text || '');
         }}
       />
@@ -229,6 +232,29 @@ const AddAccount = (props, ref) => {
   /* 账户密码 */
 
   /* 提交 */
+  const [id, setId] = useState('');
+
+  const onSavePress = async () => {
+    try {
+      const newAccount = {id, type, name, account, password};
+      const accountList = JSON.parse(await getStorage('accountList')) || [];
+      console.log(accountList);
+      accountList.push(newAccount);
+      saveStore('accountList', JSON.stringify(accountList)).then(() => {
+        hide()
+        resetData()
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  };
+  const resetData = () => {
+    setAccount('')
+    setName('')
+    setPassword('')
+    setType('游戏')
+  }
+
   const renderBtn = () => {
     const btnStyle = StyleSheet.create({
       saveBtn: {
@@ -249,7 +275,7 @@ const AddAccount = (props, ref) => {
     });
 
     return (
-      <TouchableOpacity style={btnStyle.saveBtn}>
+      <TouchableOpacity style={btnStyle.saveBtn} onPress={onSavePress}>
         <Text style={btnStyle.saveTxt}>保存</Text>
       </TouchableOpacity>
     );
@@ -284,7 +310,7 @@ const AddAccount = (props, ref) => {
   );
 };
 
-export default forwardRef(AddAccount);
+export default forwardRef(AddAccount)
 
 const styles = StyleSheet.create({
   root: {
