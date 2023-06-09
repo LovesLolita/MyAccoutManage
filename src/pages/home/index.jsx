@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   Image,
   SectionList,
+  LayoutAnimation,
 } from 'react-native';
+import {useSetState} from 'ahooks';
 
 import {getStorage} from '../../utils/storage';
 
@@ -61,14 +63,14 @@ const Home = () => {
   };
 
   /* 列表数据 */
-  
+
   // 判断是否收缩展开
-  const [sectionState, setSectionState] = useState({
+  const [sectionState, setSectionState] = useSetState({
     游戏: true,
     平台: true,
     银行卡: true,
     其它: true,
-  })
+  });
 
   // 头部列表数据图表
   const iconMap = {
@@ -79,6 +81,10 @@ const Home = () => {
   };
   // 每一项的列表数据
   const renderSectionItem = ({item, index}) => {
+    if (!sectionState[item.type]) {
+      return null;
+    }
+
     return (
       <View style={styles.itemLayout}>
         <Text style={styles.nameText}>{item.name}</Text>
@@ -92,13 +98,37 @@ const Home = () => {
   // 每一项的列表头部
   const renderSectionHeader = ({section}) => {
     return (
-      <View style={styles.groupHeader}>
+      <TouchableOpacity
+      activeOpacity={0.9}
+        style={[
+          styles.groupHeader,
+          {
+            borderBottomLeftRadius: !section.data.length || !sectionState[section.type] ? 12 : 0,
+            borderBottomRightRadius: !section.data.length || !sectionState[section.type] ? 12 : 0,
+          },
+        ]}
+        onPress={() => {
+          LayoutAnimation.easeInEaseOut();
+          setSectionState({
+            [section.type]: !sectionState[section.type],
+          });
+        }}>
         <Image style={styles.typeImg} source={iconMap[section.type]} />
         <Text style={styles.typeText}>{section.type}</Text>
-        <TouchableOpacity style={styles.arrowBtn} activeOpacity={0.6}>
-          <Image style={styles.arrowImg} source={icon_arrow} />
-        </TouchableOpacity>
-      </View>
+        <View style={styles.arrowBtn}>
+          <Image
+            style={[
+              styles.arrowImg,
+              {
+                transform: [
+                  {rotate: sectionState[section.type] ? '0deg' : '270deg'},
+                ],
+              },
+            ]}
+            source={icon_arrow}
+          />
+        </View>
+      </TouchableOpacity>
     );
   };
   /* 列表数据 end */
