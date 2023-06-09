@@ -1,4 +1,4 @@
-import React, {useState, forwardRef, useImperativeHandle, memo} from 'react';
+import React, {useState, forwardRef, useImperativeHandle, memo, useRef} from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -10,6 +10,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert
 } from 'react-native';
 
 import icon_close_modal from '../assets/icon_close_modal.png';
@@ -21,8 +22,8 @@ const AddAccount = (props, ref) => {
   const [visible, setVisible] = useState(false);
 
   const show = () => {
+    accountId.current = getUUID()
     setVisible(true);
-    setId(getUUID());
   };
 
   const hide = () => {
@@ -232,28 +233,33 @@ const AddAccount = (props, ref) => {
   /* 账户密码 */
 
   /* 提交 */
-  const [id, setId] = useState('');
+  // const [id, setId] = useState('');
+  const accountId = useRef('')
 
   const onSavePress = async () => {
     try {
-      const newAccount = {id, type, name, account, password};
+      if (!type || (!name && !account)) {
+        Alert.alert( '亲','请输入任意一项内容!');
+        return;
+      }
+      const newAccount = {id: accountId.current, type, name, account, password};
       const accountList = JSON.parse(await getStorage('accountList')) || [];
       console.log(accountList);
       accountList.push(newAccount);
       saveStore('accountList', JSON.stringify(accountList)).then(() => {
-        hide()
-        resetData()
+        hide();
+        resetData();
       });
     } catch (err) {
       console.log(err);
     }
   };
   const resetData = () => {
-    setAccount('')
-    setName('')
-    setPassword('')
-    setType('游戏')
-  }
+    setAccount('');
+    setName('');
+    setPassword('');
+    setType('游戏');
+  };
 
   const renderBtn = () => {
     const btnStyle = StyleSheet.create({
@@ -310,7 +316,7 @@ const AddAccount = (props, ref) => {
   );
 };
 
-export default forwardRef(AddAccount)
+export default forwardRef(AddAccount);
 
 const styles = StyleSheet.create({
   root: {
