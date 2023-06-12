@@ -151,7 +151,7 @@ const Home = () => {
         }}>
         <Image source={icon_add} style={styles.addImg} />
       </TouchableOpacity>
-      <AddAccount ref={addAccountRef} />
+      <AddAccount ref={addAccountRef}  onSave={getAccountList} />
     </View>
   );
 };
@@ -203,6 +203,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: 12,
+    paddingBottom: 12
   },
   typeText: {
     fontSize: 16,

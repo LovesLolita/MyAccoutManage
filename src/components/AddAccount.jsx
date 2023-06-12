@@ -27,6 +27,7 @@ const AddAccount = (props, ref) => {
   };
 
   const hide = () => {
+    props.onSave()
     setVisible(false);
   };
 
