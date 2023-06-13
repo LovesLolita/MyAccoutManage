@@ -1,4 +1,4 @@
-import React, {useRef, useEffect, useState} from 'react';
+import React, {useRef, useState, useEffect} from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -8,10 +8,12 @@ import {
   Image,
   SectionList,
   LayoutAnimation,
+  Alert,
+  Switch,
 } from 'react-native';
-import {useSetState} from 'ahooks';
+import {useSetState, useMount, useBoolean} from 'ahooks';
 
-import {getStorage} from '../../utils/storage';
+import {saveStore, getStorage, removeStorage} from '../../utils/storage';
 
 import AddAccount from '../../components/AddAccount';
 
@@ -25,6 +27,7 @@ import icon_arrow from '../../assets/icon_arrow.png';
 const Home = () => {
   /* AddAccount */
   const addAccountRef = useRef(null);
+
   // 列表数据
   const [sectionData, setSectionData] = useState([]);
 
@@ -32,35 +35,47 @@ const Home = () => {
   const getAccountList = async () => {
     try {
       const accountList = JSON.parse(await getStorage('accountList'));
-      const gameList = accountList.filter(item => item.type === '游戏') || [];
+      const gameList = accountList?.filter(item => item.type === '游戏') || [];
       const platformList =
-        accountList.filter(item => item.type === '平台') || [];
-      const bankList = accountList.filter(item => item.type === '银行卡') || [];
-      const otherList = accountList.filter(item => item.type === '其它') || [];
+        accountList?.filter(item => item.type === '平台') || [];
+      const bankList =
+        accountList?.filter(item => item.type === '银行卡') || [];
+      const otherList = accountList?.filter(item => item.type === '其它') || [];
       const sectionData = [
         {type: '游戏', data: gameList},
         {type: '平台', data: platformList},
         {type: '银行卡', data: bankList},
         {type: '其它', data: otherList},
       ];
+      LayoutAnimation.easeInEaseOut();
       setSectionData(sectionData);
     } catch (err) {
       console.log(err);
     }
   };
 
-  useEffect(() => {
+  useMount(() => {
     getAccountList();
-  }, []);
+  });
   /* AddAccount end */
 
+  /* 标题 */
+  const [passwordOpen, setPasswordOpen] = useBoolean(false);
   const renderTitle = () => {
     return (
       <View style={styles.titleLayout}>
         <Text style={styles.titleText}>账号管理</Text>
+        <Switch
+          style={styles.switch}
+          value={passwordOpen}
+          onChange={() => {
+            setPasswordOpen.toggle();
+          }}
+        />
       </View>
     );
   };
+  /* 标题 end */
 
   /* 列表数据 */
 
@@ -79,32 +94,67 @@ const Home = () => {
     银行卡: icon_bank,
     其它: icon_other,
   };
+
+  // 删除选中项
+  const deleteSectionItem = async account => {
+    try {
+      let accountList = JSON.parse(await getStorage('accountList'));
+      accountList = accountList.filter(item => item.id !== account.id);
+      saveStore('accountList', JSON.stringify(accountList)).then(() => {
+        getAccountList();
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   // 每一项的列表数据
-  const renderSectionItem = ({item, index}) => {
-    if (!sectionState[item.type]) {
+  const renderSectionItem = ({item, index, section}) => {
+    if (!sectionState[section.type]) {
       return null;
     }
 
     return (
-      <View style={styles.itemLayout}>
+      <TouchableOpacity
+        activeOpacity={0.6}
+        style={styles.itemLayout}
+        onPress={() => {
+          addAccountRef.current.show(item);
+        }}
+        onLongPress={() => {
+          const buttons = [
+            {text: '取消', onPress: () => {}},
+            {
+              text: '确定',
+              onPress: () => {
+                deleteSectionItem(item);
+              },
+            },
+          ];
+          Alert.alert('提示', `确定删除[ ${item.name} ]账户吗?`, buttons);
+        }}>
         <Text style={styles.nameText}>{item.name}</Text>
         <View style={styles.accPwdLayout}>
           <Text style={styles.accPwdTxt}>{`账户: ${item.account}`}</Text>
-          <Text style={styles.accPwdTxt}>{`密码: ${item.password}`}</Text>
+          <Text style={styles.accPwdTxt}>{`密码: ${
+            passwordOpen ? item.password : '********'
+          }`}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
   // 每一项的列表头部
   const renderSectionHeader = ({section}) => {
     return (
       <TouchableOpacity
-      activeOpacity={0.9}
+        activeOpacity={0.9}
         style={[
           styles.groupHeader,
           {
-            borderBottomLeftRadius: !section.data.length || !sectionState[section.type] ? 12 : 0,
-            borderBottomRightRadius: !section.data.length || !sectionState[section.type] ? 12 : 0,
+            borderBottomLeftRadius:
+              !section.data.length || !sectionState[section.type] ? 12 : 0,
+            borderBottomRightRadius:
+              !section.data.length || !sectionState[section.type] ? 12 : 0,
           },
         ]}
         onPress={() => {
@@ -115,20 +165,43 @@ const Home = () => {
         }}>
         <Image style={styles.typeImg} source={iconMap[section.type]} />
         <Text style={styles.typeText}>{section.type}</Text>
-        <View style={styles.arrowBtn}>
-          <Image
-            style={[
-              styles.arrowImg,
-              {
-                transform: [
-                  {rotate: sectionState[section.type] ? '0deg' : '270deg'},
-                ],
-              },
-            ]}
-            source={icon_arrow}
-          />
-        </View>
+        {(() => {
+          if (section.data.length !== 0) {
+            return (
+              <View style={styles.arrowBtn}>
+                <Image
+                  style={[
+                    styles.arrowImg,
+                    {
+                      transform: [
+                        {
+                          rotate: sectionState[section.type]
+                            ? '0deg'
+                            : '270deg',
+                        },
+                      ],
+                    },
+                  ]}
+                  source={icon_arrow}
+                />
+              </View>
+            );
+          }
+        })()}
       </TouchableOpacity>
+    );
+  };
+
+  // 列表为空渲染组件
+  const renderEmptyItem = () => {
+    return (
+      <View style={styles.itemLayout}>
+        <Text style={styles.nameText}>1234</Text>
+        <View style={styles.accPwdLayout}>
+          <Text style={styles.accPwdTxt}>{`账户: $1234`}</Text>
+          <Text style={styles.accPwdTxt}>{`密码: 1234`}</Text>
+        </View>
+      </View>
     );
   };
   /* 列表数据 end */
@@ -151,7 +224,7 @@ const Home = () => {
         }}>
         <Image source={icon_add} style={styles.addImg} />
       </TouchableOpacity>
-      <AddAccount ref={addAccountRef}  onSave={getAccountList} />
+      <AddAccount ref={addAccountRef} onSave={getAccountList} />
     </View>
   );
 };
@@ -169,6 +242,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+    flexDirection: 'row',
+  },
+  switch: {
+    position: 'absolute',
+    right: 4,
   },
   titleText: {
     fontSize: 18,
@@ -203,7 +281,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: 12,
-    paddingBottom: 12
+    paddingBottom: 12,
   },
   typeText: {
     fontSize: 16,

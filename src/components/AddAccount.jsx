@@ -1,4 +1,11 @@
-import React, {useState, forwardRef, useImperativeHandle, memo, useRef} from 'react';
+import React, {
+  useState,
+  forwardRef,
+  useImperativeHandle,
+  memo,
+  useRef,
+  useEffect,
+} from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -10,24 +17,44 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Alert
+  Alert,
 } from 'react-native';
 
 import icon_close_modal from '../assets/icon_close_modal.png';
 import {saveStore, getStorage, removeStorage} from '../utils/storage';
 import {getUUID} from '../utils/UUID';
 
+import {useBoolean, useUpdateEffect} from 'ahooks';
+
 const AddAccount = (props, ref) => {
   /* Modal */
   const [visible, setVisible] = useState(false);
 
-  const show = () => {
-    accountId.current = getUUID()
-    setVisible(true);
+  // 是否 修改数据
+  const [ModifyFlag, setModifyFlag] = useBoolean(false);
+
+  const show = currentData => {
+    if (currentData) {
+      setModifyFlag.setTrue();
+      accountId.current = currentData.id;
+      setType(currentData.type);
+      setName(currentData.name);
+      setAccount(currentData.account);
+      setPassword(currentData.password);
+      setVisible(true);
+    } else {
+      setModifyFlag.setFalse();
+      accountId.current = getUUID();
+      setType('游戏');
+      setName('');
+      setAccount('');
+      setPassword('');
+      setVisible(true);
+    }
   };
 
   const hide = () => {
-    props.onSave()
+    props.onSave();
     setVisible(false);
   };
 
@@ -67,7 +94,9 @@ const AddAccount = (props, ref) => {
 
     return (
       <View style={titleStyles.titleLayout}>
-        <Text style={titleStyles.titleTxt}>添加账号</Text>
+        <Text style={titleStyles.titleTxt}>
+          {ModifyFlag ? '修改账号' : '添加账号'}
+        </Text>
         <TouchableOpacity style={titleStyles.closeBtn} onPress={hide}>
           <Image style={titleStyles.closeIMG} source={icon_close_modal} />
         </TouchableOpacity>
@@ -235,17 +264,20 @@ const AddAccount = (props, ref) => {
 
   /* 提交 */
   // const [id, setId] = useState('');
-  const accountId = useRef('')
+  const accountId = useRef('');
 
   const onSavePress = async () => {
     try {
       if (!type || (!name && !account)) {
-        Alert.alert( '亲','请输入任意一项内容!');
+        Alert.alert('亲', '请输入任意一项内容!');
         return;
       }
       const newAccount = {id: accountId.current, type, name, account, password};
-      const accountList = JSON.parse(await getStorage('accountList')) || [];
-      console.log(accountList);
+      let accountList = JSON.parse(await getStorage('accountList')) || [];
+      if (ModifyFlag) {
+        accountList = accountList.filter(item => item.id !== accountId.current);
+        console.log(accountList);
+      }
       accountList.push(newAccount);
       saveStore('accountList', JSON.stringify(accountList)).then(() => {
         hide();
@@ -256,6 +288,8 @@ const AddAccount = (props, ref) => {
     }
   };
   const resetData = () => {
+    setModifyFlag.setFalse();
+    accountId.current = '';
     setAccount('');
     setName('');
     setPassword('');
