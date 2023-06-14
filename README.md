@@ -3,7 +3,7 @@
 ## 技术栈
 
 ```
-react Native + react 18.2.0 + ahooks + react-native-get-random-values + UUID
+react Native + react 18.2.0 + ahooks + @react-native-async-storage/async-storage + react-native-get-random-values + UUID
 ```
 
 ## Project setup
